@@ -1,7 +1,6 @@
 package com.dv.apps.shader.paper
 
 import android.content.Context
-import android.opengl.GLES20
 import android.opengl.GLES20.*
 import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService
@@ -12,10 +11,8 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-import java.nio.Buffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -156,9 +153,9 @@ class MainService : WallpaperService() {
                 glClear(GL_COLOR_BUFFER_BIT)
 
                 val vertices = floatArrayOf(
-                    -1f, -1f,
+                    -3f, -1f,
                     1f, -1f,
-                    1f, 1f
+                    1f, 3f
                 )
 
                 val buffer = ByteBuffer
