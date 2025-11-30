@@ -1,6 +1,8 @@
 package com.dv.apps.shader.paper
 
 import android.content.Context
+import android.opengl.GLES20
+import android.opengl.GLES20.*
 import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
@@ -10,6 +12,10 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
+import java.nio.Buffer
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -71,7 +77,7 @@ class MainService : WallpaperService() {
             }
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.preserveEGLContextOnPause = true
-            glSurfaceView?.setRenderer(redPainter)
+            glSurfaceView?.setRenderer(ShaderRenderer())
         }
 
         suspend fun onResume() {
@@ -97,23 +103,111 @@ class MainService : WallpaperService() {
             }
         }
 
-        private val redPainter = object : GLSurfaceView.Renderer {
-            override fun onDrawFrame(gl: GL10) {
-                gl.glClearColor(1f, 0f, 0f, 1f)
-                gl.glClear(GL10.GL_COLOR_BUFFER_BIT)
-            }
-
-            override fun onSurfaceChanged(
-                gl: GL10,
-                width: Int,
-                height: Int
-            ) {
-            }
+        private class ShaderRenderer : GLSurfaceView.Renderer {
+            private var programId = -1
+            private var vertexId = -1
+            private var fragmentId = -1
 
             override fun onSurfaceCreated(
                 gl: GL10,
                 config: EGLConfig
             ) {
+                vertexId = loadShader(GL_VERTEX_SHADER) {
+                    """
+                    attribute vec4 vPosition;
+                    void main()
+                    {
+                        gl_Position = vPosition;
+                    }
+                    """.trimIndent()
+                } ?: -1
+
+                fragmentId = loadShader(GL_FRAGMENT_SHADER) {
+                    """
+                    precision mediump float;
+                    void main()
+                    {
+                        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    }
+                    """.trimIndent()
+                } ?: -1
+
+                programId = glCreateProgram()
+
+                glAttachShader(programId, vertexId)
+                glAttachShader(programId, fragmentId)
+
+                glBindAttribLocation(programId, 0, "vPosition")
+
+                glLinkProgram(programId)
+
+                val buffer = intArrayOf(-1)
+                glGetProgramiv(programId, GL_LINK_STATUS, buffer, 0)
+
+                if (buffer[0] == 0) {
+                    val reason = glGetProgramInfoLog(programId)
+                    android.util.Log.d("GLSLWallpaper", "Failed to link program: $reason")
+                    glDeleteProgram(programId)
+                }
+            }
+
+            override fun onDrawFrame(gl: GL10) {
+                glClearColor(0f, 1f, 1f, 1f)
+                glClear(GL_COLOR_BUFFER_BIT)
+
+                val vertices = floatArrayOf(
+                    -1f, -1f,
+                    1f, -1f,
+                    1f, 1f
+                )
+
+                val buffer = ByteBuffer
+                    .allocateDirect(vertices.size * 4)
+                    .order(ByteOrder.nativeOrder())
+                    .also {
+                        it.asFloatBuffer().put(vertices)
+                    }
+
+                glUseProgram(programId)
+
+                glVertexAttribPointer(
+                    0,
+                    2,
+                    GL_FLOAT,
+                    false,
+                    0,
+                    buffer
+                )
+
+                glEnableVertexAttribArray(0)
+
+                glDrawArrays(GL_TRIANGLES, 0, 3)
+            }
+
+            override fun onSurfaceChanged(
+                gl: GL10?,
+                width: Int,
+                height: Int
+            ) {
+                glViewport(0, 0, width, height)
+            }
+
+            private fun loadShader(
+                type: Int,
+                source: () -> String,
+            ): Int? {
+                val id = glCreateShader(type)
+                glShaderSource(id, source())
+                glCompileShader(id)
+                val buffer = intArrayOf(-1)
+                glGetShaderiv(id, GL_COMPILE_STATUS, buffer, 0)
+                if (buffer[0] == 0) {
+                    val reason = glGetShaderInfoLog(id)
+                    android.util.Log.d("GLSLWallpaper", "Failed to compile shader: $reason")
+                    glDeleteShader(id)
+                    return null
+                }
+                return id
             }
         }
     }
