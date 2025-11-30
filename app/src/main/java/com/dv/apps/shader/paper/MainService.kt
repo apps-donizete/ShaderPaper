@@ -76,7 +76,7 @@ class MainService : WallpaperService() {
             }
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.preserveEGLContextOnPause = true
-            glSurfaceView?.setRenderer(ShaderRenderer())
+            glSurfaceView?.setRenderer(ShaderRenderer(context))
         }
 
         suspend fun onResume() {
@@ -102,7 +102,9 @@ class MainService : WallpaperService() {
             }
         }
 
-        private class ShaderRenderer : GLSurfaceView.Renderer {
+        private class ShaderRenderer(
+            private val context: Context
+        ) : GLSurfaceView.Renderer {
             private var programId = -1
             private var vertexId = -1
             private var fragmentId = -1
@@ -140,31 +142,11 @@ class MainService : WallpaperService() {
                 }
 
                 fragmentId = loadShader(GL_FRAGMENT_SHADER) {
-                    """
-                    precision mediump float;
-                    
-                    uniform vec2 iResolution;
-                    uniform float iTime;
-
-                    void main() {
-                        vec2 st = gl_FragCoord.xy / iResolution.xy;
-                    
-                        float radius = .02;
-                    
-                        float a = sin(iTime) / 8.;
-                        float b = cos(iTime) / 8.;
-                    
-                        vec2 center = vec2(.5, .5) + vec2(b, a);
-                    
-                        float distance = distance(st, center);
-                    
-                        if (distance > radius) {
-                            gl_FragColor = vec4(1);
-                        } else {
-                            gl_FragColor = vec4(1, 0, 0, 1);
-                        }
+                    context.resources.openRawResource(
+                        if (false) R.raw.simple_shader else R.raw.complex_shader
+                    ).use {
+                        it.readBytes().decodeToString()
                     }
-                    """.trimIndent()
                 }
 
                 programId = glCreateProgram().also {
