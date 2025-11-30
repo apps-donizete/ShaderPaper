@@ -105,6 +105,19 @@ class MainService : WallpaperService() {
             private var vertexId = -1
             private var fragmentId = -1
 
+            private val fullQuadVertexBuffer = ByteBuffer
+                .allocateDirect(6 * 4)
+                .order(ByteOrder.nativeOrder())
+                .also {
+                    it.asFloatBuffer().put(
+                        floatArrayOf(
+                            -3f, -1f,
+                            1f, -1f,
+                            1f, 3f
+                        )
+                    )
+                }
+
             override fun onSurfaceCreated(
                 gl: GL10,
                 config: EGLConfig
@@ -145,40 +158,26 @@ class MainService : WallpaperService() {
                     val reason = glGetProgramInfoLog(programId)
                     android.util.Log.d("GLSLWallpaper", "Failed to link program: $reason")
                     glDeleteProgram(programId)
+                    return
                 }
-            }
-
-            override fun onDrawFrame(gl: GL10) {
-                glClearColor(0f, 1f, 1f, 1f)
-                glClear(GL_COLOR_BUFFER_BIT)
-
-                val vertices = floatArrayOf(
-                    -3f, -1f,
-                    1f, -1f,
-                    1f, 3f
-                )
-
-                val buffer = ByteBuffer
-                    .allocateDirect(vertices.size * 4)
-                    .order(ByteOrder.nativeOrder())
-                    .also {
-                        it.asFloatBuffer().put(vertices)
-                    }
 
                 glUseProgram(programId)
 
+                glEnableVertexAttribArray(0)
                 glVertexAttribPointer(
                     0,
                     2,
                     GL_FLOAT,
                     false,
                     0,
-                    buffer
+                    fullQuadVertexBuffer
                 )
 
-                glEnableVertexAttribArray(0)
-
                 glDrawArrays(GL_TRIANGLES, 0, 3)
+            }
+
+            override fun onDrawFrame(gl: GL10) {
+
             }
 
             override fun onSurfaceChanged(
