@@ -1,11 +1,13 @@
 package com.dv.apps.shader.paper
 
-import android.graphics.Color
+import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
 
 class MainService : WallpaperService() {
     override fun onCreateEngine() = EngineImpl()
@@ -20,9 +22,34 @@ class MainService : WallpaperService() {
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
-            val canvas = holder.lockCanvas()
-            canvas.drawColor(Color.RED)
-            holder.unlockCanvasAndPost(canvas)
+            val glSurfaceView = object : GLSurfaceView(applicationContext) {
+                override fun getHolder() = holder
+            }
+
+            glSurfaceView.setEGLContextClientVersion(2)
+            glSurfaceView.preserveEGLContextOnPause = true
+
+            glSurfaceView.setRenderer(object: GLSurfaceView.Renderer {
+                override fun onDrawFrame(gl: GL10) {
+                    gl.glClearColor(1f, 0f, 0f, 1f)
+                    gl.glClear(GL10.GL_COLOR_BUFFER_BIT)
+                }
+
+                override fun onSurfaceChanged(
+                    gl: GL10,
+                    width: Int,
+                    height: Int
+                ) {
+                }
+
+                override fun onSurfaceCreated(
+                    gl: GL10,
+                    config: EGLConfig
+                ) {
+                }
+            })
+
+            glSurfaceView.onResume()
         }
 
         override fun onSurfaceChanged(
