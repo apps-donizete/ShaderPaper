@@ -3,6 +3,7 @@ package com.dv.apps.shader.paper
 import android.content.Context
 import android.opengl.GLES20.*
 import android.opengl.GLSurfaceView
+import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import androidx.lifecycle.Lifecycle
@@ -105,6 +106,9 @@ class MainService : WallpaperService() {
             private var vertexId = -1
             private var fragmentId = -1
 
+            private var iResolutionId = -1
+            private var iTimeId = -1
+
             private val fullQuadVertexBuffer = ByteBuffer
                 .allocateDirect(6 * 4)
                 .order(ByteOrder.nativeOrder())
@@ -135,9 +139,27 @@ class MainService : WallpaperService() {
                 fragmentId = loadShader(GL_FRAGMENT_SHADER) {
                     """
                     precision mediump float;
-                    void main()
-                    {
-                        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    
+                    uniform vec2 iResolution;
+                    uniform float iTime;
+
+                    void main() {
+                        vec2 st = gl_FragCoord.xy / iResolution.xy;
+                    
+                        float radius = .02;
+                    
+                        float a = sin(iTime) / 8.;
+                        float b = cos(iTime) / 8.;
+                    
+                        vec2 center = vec2(.5, .5) + vec2(b, a);
+                    
+                        float distance = distance(st, center);
+                    
+                        if (distance > radius) {
+                            gl_FragColor = vec4(1);
+                        } else {
+                            gl_FragColor = vec4(1, 0, 0, 1);
+                        }
                     }
                     """.trimIndent()
                 } ?: -1
@@ -173,11 +195,17 @@ class MainService : WallpaperService() {
                     fullQuadVertexBuffer
                 )
 
-                glDrawArrays(GL_TRIANGLES, 0, 3)
+                iResolutionId = glGetUniformLocation(programId, "iResolution")
+                iTimeId = glGetUniformLocation(programId, "iTime")
             }
 
             override fun onDrawFrame(gl: GL10) {
+                val time = SystemClock.uptimeMillis() / 1000f
 
+                glUseProgram(programId)
+                glUniform1f(iTimeId, time)
+
+                glDrawArrays(GL_TRIANGLES, 0, 3)
             }
 
             override fun onSurfaceChanged(
@@ -186,6 +214,7 @@ class MainService : WallpaperService() {
                 height: Int
             ) {
                 glViewport(0, 0, width, height)
+                glUniform2f(iResolutionId, width.toFloat(), height.toFloat())
             }
 
             private fun loadShader(
