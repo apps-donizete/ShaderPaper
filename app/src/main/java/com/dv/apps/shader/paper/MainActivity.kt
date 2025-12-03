@@ -54,6 +54,9 @@ class MainActivity : ComponentActivity() {
                                 it
                             )
                         }
+                        item {
+                            ApplyItem()
+                        }
                     }
                 }
             }
