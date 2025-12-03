@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     implementation(libs.bundles.retrofit)
-    implementation(libs.coil.compose)
+    implementation(libs.bundles.media3)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)

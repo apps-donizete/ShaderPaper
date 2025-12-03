@@ -8,7 +8,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,9 +21,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.compose.PlayerSurface
 import com.dv.apps.shader.paper.domain.model.ShaderManifest
 import com.dv.apps.shader.paper.ui.theme.ShaderPaperTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,7 +48,10 @@ class MainActivity : ComponentActivity() {
 
                     LazyColumn(Modifier.padding(innerPadding)) {
                         items(state.items) {
-                            ShaderPreview(it)
+                            ShaderPreview(
+                                state.baseUrl,
+                                it
+                            )
                         }
                     }
                 }
@@ -52,11 +62,31 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ShaderPreview(
+    baseUrl: String,
     item: ShaderManifest.ShaderManifestItem,
     modifier: Modifier = Modifier
 ) {
-    Card {
-        Text(item.title)
+    val context = LocalContext.current
+    val player = remember {
+        val item = MediaItem.fromUri(
+            "$baseUrl/${item.path}/preview.webm"
+        )
+        ExoPlayer.Builder(context).build().apply {
+            addMediaItem(item)
+            prepare()
+        }
+    }
+    Card(
+        Modifier.padding(8.dp)
+    ) {
+        PlayerSurface(
+            player = player,
+            modifier = Modifier.fillMaxSize().aspectRatio(1f)
+        )
+        Text(
+            item.title,
+            Modifier.padding(8.dp)
+        )
     }
 }
 
