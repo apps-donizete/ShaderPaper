@@ -11,6 +11,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.create
 
+private const val URL = "https://raw.githubusercontent.com/apps-donizete/ShaderPaper/refs/heads/main/repository/"
+
 @Module
 @InstallIn(SingletonComponent::class)
 object RetrofitModule {
@@ -26,7 +28,7 @@ object RetrofitModule {
                 .build()
         )
         .addConverterFactory(GsonConverterFactory.create())
-        .baseUrl("https://raw.githubusercontent.com/apps-donizete/ShaderPaper/refs/heads/main/")
+        .baseUrl(URL)
         .build()
 
     @Provides

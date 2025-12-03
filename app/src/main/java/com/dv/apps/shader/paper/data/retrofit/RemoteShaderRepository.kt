@@ -4,6 +4,6 @@ import com.dv.apps.shader.paper.domain.model.ShaderManifest
 import retrofit2.http.GET
 
 interface RemoteShaderRepository {
-    @GET("repository/manifest.json")
+    @GET("manifest.json")
     suspend fun getManifest(): ShaderManifest
 }
