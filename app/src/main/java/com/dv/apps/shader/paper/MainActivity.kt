@@ -16,16 +16,18 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
+import com.dv.apps.shader.paper.domain.repository.ShaderRepository
 import com.dv.apps.shader.paper.ui.theme.ShaderPaperTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.ResponseBody
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.create
-import retrofit2.http.GET
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var shaderRepository: ShaderRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,23 +61,9 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            val retrofit: Retrofit = Retrofit.Builder()
-                .client(
-                    OkHttpClient.Builder()
-                        .addInterceptor(HttpLoggingInterceptor())
-                        .build()
-                )
-                .baseUrl("https://raw.githubusercontent.com/apps-donizete/ShaderPaper/refs/heads/main/")
-                .build()
-            val repository = retrofit.create<Repository>()
-            val data = repository.getData()
-            val content = data.string()
-            println(content)
+            shaderRepository.getManifest().collect {
+                println(it)
+            }
         }
     }
-}
-
-interface Repository {
-    @GET("repository/data.txt")
-    suspend fun getData(): ResponseBody
 }
