@@ -1,0 +1,9 @@
+{
+  "description" : "Shaders well tested",
+  "items": [
+    {
+      "title": "Lights in Smoke",
+      "path": "lights_in_smoke"
+    }
+  ]
+}

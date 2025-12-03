@@ -1,0 +1,13 @@
+{
+  "author": "https://www.shadertoy.com/user/ehj1",
+  "source": "https://www.shadertoy.com/view/MdyGzR",
+  "fragment": "fragment.shader",
+  "uniforms": {
+    "iTime": {
+      "type": "time"
+    },
+    "iResolution": {
+      "type": "resolution"
+    }
+  }
+}
