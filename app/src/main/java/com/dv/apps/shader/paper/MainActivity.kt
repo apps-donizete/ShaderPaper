@@ -7,26 +7,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.lifecycleScope
-import com.dv.apps.shader.paper.domain.repository.ShaderRepository
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dv.apps.shader.paper.domain.model.ShaderManifest
 import com.dv.apps.shader.paper.ui.theme.ShaderPaperTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var shaderRepository: ShaderRepository
+    private val viewModel by viewModels<MainActivityViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,36 +37,49 @@ class MainActivity : ComponentActivity() {
         setContent {
             ShaderPaperTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        Modifier.padding(innerPadding)
-                    ) {
-                        val context = LocalContext.current
-                        Button(
-                            onClick = {
-                                val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-                                    .apply {
-                                        putExtra(
-                                            WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
-                                            ComponentName(
-                                                context,
-                                                MainService::class.java
-                                            )
-                                        )
-                                    }
-                                context.startActivity(intent)
-                            }
-                        ) {
-                            Text("Click me")
+                    val state by viewModel.state.collectAsStateWithLifecycle()
+
+                    LazyColumn(Modifier.padding(innerPadding)) {
+                        items(state.items) {
+                            ShaderPreview(it)
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        lifecycleScope.launch {
-            shaderRepository.getManifest().collect {
-                println(it)
+@Composable
+fun ShaderPreview(
+    item: ShaderManifest.ShaderManifestItem,
+    modifier: Modifier = Modifier
+) {
+    Card {
+        Text(item.title)
+    }
+}
+
+@Composable
+fun ApplyItem(modifier: Modifier = Modifier) {
+    Column {
+        val context = LocalContext.current
+        Button(
+            onClick = {
+                val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+                    .apply {
+                        putExtra(
+                            WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                            ComponentName(
+                                context,
+                                MainService::class.java
+                            )
+                        )
+                    }
+                context.startActivity(intent)
             }
+        ) {
+            Text("Click me")
         }
     }
 }
