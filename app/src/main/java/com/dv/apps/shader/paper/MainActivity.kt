@@ -8,7 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.compose.PlayerSurface
 import com.dv.apps.shader.paper.domain.model.ShaderManifest
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun ShaderPreview(
     baseUrl: String,
@@ -68,11 +70,14 @@ fun ShaderPreview(
 ) {
     val context = LocalContext.current
     val player = remember {
-        val item = MediaItem.fromUri(
-            "$baseUrl/${item.path}/preview.webm"
-        )
-        ExoPlayer.Builder(context).build().apply {
+        val item = MediaItem.fromUri("$baseUrl/${item.path}/preview.webm")
+        ExoPlayer
+            .Builder(context)
+            .build()
+        .apply {
             addMediaItem(item)
+            playWhenReady = true
+            repeatMode = ExoPlayer.REPEAT_MODE_ONE
             prepare()
         }
     }
