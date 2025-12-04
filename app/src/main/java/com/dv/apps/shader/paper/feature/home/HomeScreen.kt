@@ -12,13 +12,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -28,16 +31,33 @@ import com.dv.apps.shader.paper.MainService
 import com.dv.apps.shader.paper.domain.model.ShaderManifest
 
 @Composable
-fun HomeScreen(
-    modifier: Modifier = Modifier,
-    viewModel: HomeViewModel
-) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+fun HomeScreen() {
+    if (LocalInspectionMode.current) {
+        HomeScreen(State())
+    } else {
+        val viewModel = hiltViewModel<HomeViewModel>()
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        HomeScreen(state)
+    }
+}
 
-    LazyColumn(modifier) {
-        items(state.items) {
+@Composable
+internal fun HomeScreen(
+    state: State
+) {
+    Surface(Modifier.fillMaxSize()) {
+        ShaderManifest(state.shaderManifest)
+    }
+}
+
+@Composable
+fun ShaderManifest(
+    item: ShaderManifest
+) {
+    LazyColumn {
+        items(item.items) {
             ShaderPreview(
-                state.baseUrl,
+                item.baseUrl,
                 it
             )
         }
@@ -51,8 +71,7 @@ fun HomeScreen(
 @Composable
 fun ShaderPreview(
     baseUrl: String,
-    item: ShaderManifest.ShaderManifestItem,
-    modifier: Modifier = Modifier
+    item: ShaderManifest.ShaderManifestItem
 ) {
     val context = LocalContext.current
     val player = remember {
@@ -72,7 +91,9 @@ fun ShaderPreview(
     ) {
         PlayerSurface(
             player = player,
-            modifier = Modifier.fillMaxSize().aspectRatio(1f)
+            modifier = Modifier
+                .fillMaxSize()
+                .aspectRatio(1f)
         )
         Text(
             item.title,
