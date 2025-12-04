@@ -1,4 +1,4 @@
-package com.dv.apps.shader.paper
+package com.dv.apps.shader.paper.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,10 +10,10 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class MainActivityViewModel @Inject constructor(
+class HomeViewModel @Inject constructor(
     private val shaderRepository: ShaderRepository
 ) : ViewModel() {
     val state = shaderRepository
         .getManifest()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, ShaderManifest())
+        .stateIn(viewModelScope, SharingStarted.Companion.Eagerly, ShaderManifest())
 }
