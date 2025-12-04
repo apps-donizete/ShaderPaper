@@ -4,6 +4,7 @@ import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
 import androidx.annotation.OptIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,32 +32,39 @@ import com.dv.apps.shader.paper.MainService
 import com.dv.apps.shader.paper.domain.model.ShaderManifest
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onItemClicked: (ShaderManifest.ShaderManifestItem) -> Unit
+) {
     if (LocalInspectionMode.current) {
-        HomeScreen(State())
+        HomeScreen(State(), onItemClicked)
     } else {
         val viewModel = hiltViewModel<HomeViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle()
-        HomeScreen(state)
+        HomeScreen(state, onItemClicked)
     }
 }
 
 @Composable
 internal fun HomeScreen(
-    state: State
+    state: State,
+    onItemClicked: (ShaderManifest.ShaderManifestItem) -> Unit
 ) {
     Surface(Modifier.fillMaxSize()) {
-        ShaderManifest(state.shaderManifest)
+        ShaderManifest(state.shaderManifest, onItemClicked)
     }
 }
 
 @Composable
 fun ShaderManifest(
-    item: ShaderManifest
+    item: ShaderManifest,
+    onClick: (ShaderManifest.ShaderManifestItem) -> Unit = {}
 ) {
     LazyColumn {
         items(item.items) {
             ShaderPreview(
+                Modifier.clickable {
+                    onClick(it)
+                },
                 item.baseUrl,
                 it
             )
@@ -70,6 +78,7 @@ fun ShaderManifest(
 @OptIn(UnstableApi::class)
 @Composable
 fun ShaderPreview(
+    modifier: Modifier,
     baseUrl: String,
     item: ShaderManifest.ShaderManifestItem
 ) {
@@ -87,7 +96,7 @@ fun ShaderPreview(
             }
     }
     Card(
-        Modifier.padding(8.dp)
+        modifier.padding(8.dp)
     ) {
         PlayerSurface(
             player = player,

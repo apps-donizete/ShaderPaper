@@ -18,7 +18,9 @@ fun MainNavigation() {
         onBack = { backStack.removeLastOrNull() },
         entryProvider = entryProvider {
             entry<Entry.Home> {
-                HomeScreen()
+                HomeScreen {
+                    backStack.add(Entry.Preview(it))
+                }
             }
             entry<Entry.Preview> {
                 PreviewScreen(it.item)
