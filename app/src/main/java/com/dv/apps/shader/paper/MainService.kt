@@ -1,22 +1,16 @@
 package com.dv.apps.shader.paper
 
 import android.content.Context
-import android.opengl.GLES20.*
 import android.opengl.GLSurfaceView
-import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
-import android.util.Log
 import android.view.SurfaceHolder
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.dv.apps.shader.paper.presentation.glsl.ShaderRenderer
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
 
 class MainService : WallpaperService() {
     override fun onCreateEngine() = EngineImpl()
@@ -26,23 +20,32 @@ class MainService : WallpaperService() {
         private val glslWallpaper = GLSLWallpaper(applicationContext, this)
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
-            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-
             lifecycleScope.launch {
-                repeatOnLifecycle(Lifecycle.State.CREATED) {
-                    glslWallpaper.onCreate()
+                launch {
+                    repeatOnLifecycle(Lifecycle.State.CREATED) {
+                        glslWallpaper.initialize()
+                    }
                 }
-                repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                    glslWallpaper.onResume()
+                launch {
+                    repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        glslWallpaper.stopRendering()
+                    }
                 }
-                repeatOnLifecycle(Lifecycle.State.DESTROYED) {
-                    glslWallpaper.onDestroy()
+                launch {
+                    repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                        glslWallpaper.startRendering()
+                    }
+                }
+                launch {
+                    repeatOnLifecycle(Lifecycle.State.DESTROYED) {
+                        glslWallpaper.destroy()
+                    }
                 }
             }
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
-            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         }
 
         override fun onSurfaceChanged(
@@ -51,12 +54,17 @@ class MainService : WallpaperService() {
             width: Int,
             height: Int
         ) {
-            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
         }
 
-        override fun onSurfaceDestroyed(holder: SurfaceHolder) {
-            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        override fun onVisibilityChanged(visible: Boolean) {
+            if (isVisible) {
+                lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            } else {
+                lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+                lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+                lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            }
         }
 
         override fun onDestroy() {
@@ -70,24 +78,32 @@ class MainService : WallpaperService() {
     ) {
         private var glSurfaceView: GLSurfaceViewImpl? = null
 
-        suspend fun onCreate() {
+        suspend fun initialize() {
             glSurfaceView = object : GLSurfaceViewImpl(context) {
                 override fun getHolder() = engine.surfaceHolder
             }
             glSurfaceView?.setEGLContextClientVersion(2)
             glSurfaceView?.preserveEGLContextOnPause = true
-            glSurfaceView?.setRenderer(ShaderRenderer(context))
+
+            val fragmentShaderBuilder = {
+                context.resources.openRawResource(
+                    R.raw.complex_shader
+                ).use {
+                    it.readBytes().decodeToString()
+                }
+            }
+            glSurfaceView?.setRenderer(ShaderRenderer(fragmentShaderBuilder))
         }
 
-        suspend fun onResume() {
+        suspend fun startRendering() {
             glSurfaceView?.onResume()
         }
 
-        suspend fun onPause() {
+        suspend fun stopRendering() {
             glSurfaceView?.onPause()
         }
 
-        suspend fun onDestroy() {
+        suspend fun destroy() {
             glSurfaceView?.onDestroy()
             glSurfaceView = null
         }
@@ -99,125 +115,6 @@ class MainService : WallpaperService() {
 
             fun onDestroy() {
                 onDetachedFromWindow()
-            }
-        }
-
-        private class ShaderRenderer(
-            private val context: Context
-        ) : GLSurfaceView.Renderer {
-            private var programId = -1
-            private var vertexId = -1
-            private var fragmentId = -1
-
-            private var iResolutionId = -1
-            private var iTimeId = -1
-
-            private val fullScreenTriangleBuffer = ByteBuffer
-                .allocateDirect(6 * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-                .apply {
-                    put(
-                        floatArrayOf(
-                            -3f, -1f,
-                            1f, -1f,
-                            1f, 3f
-                        )
-                    )
-                    position(0)
-                }
-
-            override fun onSurfaceCreated(
-                gl: GL10,
-                config: EGLConfig
-            ) {
-                vertexId = loadShader(GL_VERTEX_SHADER) {
-                    """
-                    attribute vec4 vPosition;
-                    void main()
-                    {
-                        gl_Position = vPosition;
-                    }
-                    """.trimIndent()
-                }
-
-                fragmentId = loadShader(GL_FRAGMENT_SHADER) {
-                    context.resources.openRawResource(
-                        if (false) R.raw.simple_shader else R.raw.complex_shader
-                    ).use {
-                        it.readBytes().decodeToString()
-                    }
-                }
-
-                programId = glCreateProgram().also {
-                    glAttachShader(it, vertexId)
-                    glAttachShader(it, fragmentId)
-                    glBindAttribLocation(it, 0, "vPosition")
-                    glLinkProgram(it)
-
-                    val linkStatus = intArrayOf(-1)
-                    glGetProgramiv(it, GL_LINK_STATUS, linkStatus, 0)
-
-                    if (linkStatus[0] == 0) {
-                        glDeleteProgram(programId)
-
-                        val reason = glGetProgramInfoLog(programId)
-                        Log.e("GLSLWallpaper", "Failed to link program: $reason")
-
-                        throw IllegalStateException("Failed to link program")
-                    }
-                }
-
-                glDeleteShader(vertexId)
-                glDeleteShader(fragmentId)
-
-                glUseProgram(programId)
-
-                iResolutionId = glGetUniformLocation(programId, "iResolution")
-                iTimeId = glGetUniformLocation(programId, "iTime")
-
-                glEnableVertexAttribArray(0)
-                glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, fullScreenTriangleBuffer)
-            }
-
-            override fun onDrawFrame(gl: GL10) {
-                glUseProgram(programId)
-                glUniform1f(iTimeId, SystemClock.uptimeMillis() / 1000f)
-                glDrawArrays(GL_TRIANGLES, 0, 3)
-            }
-
-            override fun onSurfaceChanged(
-                gl: GL10?,
-                width: Int,
-                height: Int
-            ) {
-                glViewport(0, 0, width, height)
-                glUseProgram(programId)
-                glUniform2f(iResolutionId, width.toFloat(), height.toFloat())
-            }
-
-            private fun loadShader(
-                type: Int,
-                source: () -> String,
-            ): Int {
-                val id = glCreateShader(type)
-
-                glShaderSource(id, source())
-                glCompileShader(id)
-
-                val compileStatus = intArrayOf(-1)
-                glGetShaderiv(id, GL_COMPILE_STATUS, compileStatus, 0)
-
-                if (compileStatus[0] == 0) {
-                    glDeleteShader(id)
-
-                    val reason = glGetShaderInfoLog(id)
-                    Log.e("GLSLWallpaper", "Failed to compile shader: $reason")
-
-                    throw IllegalStateException("Failed to compile shader")
-                }
-
-                return id
             }
         }
     }
