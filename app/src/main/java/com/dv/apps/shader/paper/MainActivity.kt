@@ -33,6 +33,8 @@ import androidx.media3.ui.compose.PlayerSurface
 import com.dv.apps.shader.paper.domain.model.ShaderManifest
 import com.dv.apps.shader.paper.ui.theme.ShaderPaperTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.microedition.khronos.egl.EGL10
+import javax.microedition.khronos.egl.EGLContext
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -42,6 +44,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val egl = EGLContext.getEGL() as EGL10
+        val display = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY)
+        val version = intArrayOf(0, 0)
+        // will always return the minimum version
+        // let's improve later
+        egl.eglInitialize(display, version)
+        egl.eglTerminate(display)
+
         setContent {
             ShaderPaperTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

@@ -35,7 +35,7 @@ import java.nio.ByteOrder
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-class ShaderRenderer(
+class GLSLRenderer(
     private val fragmentShaderBuilder: () -> String
 ) : GLSurfaceView.Renderer {
     private var programId = -1

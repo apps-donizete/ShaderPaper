@@ -9,7 +9,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.dv.apps.shader.paper.presentation.glsl.ShaderRenderer
+import com.dv.apps.shader.paper.presentation.glsl.GLSLRenderer
 import kotlinx.coroutines.launch
 
 class MainService : WallpaperService() {
@@ -92,7 +92,7 @@ class MainService : WallpaperService() {
                     it.readBytes().decodeToString()
                 }
             }
-            glSurfaceView?.setRenderer(ShaderRenderer(fragmentShaderBuilder))
+            glSurfaceView?.setRenderer(GLSLRenderer(fragmentShaderBuilder))
         }
 
         suspend fun startRendering() {
